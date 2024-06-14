@@ -72,10 +72,10 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     needs: [build]
     permissions:
-      contents: write  # to deploy to GH Pages automatically
+      contents: write  # to deploy to GH Pages & Releases
     strategy:
       matrix:
         subdir: ${{ fromJson(needs.build.outputs.subdirs) }}
@@ -88,7 +88,7 @@ jobs:
       - name: List repodata files
         run: ls -alh ${{ matrix.subdir }}/repodata.*
       - uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
-        if: matrix.subdir == 'noarch' && github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        if: matrix.subdir == 'noarch'
         with:
           github_token: ${{ github.token }}
           publish_branch: gh-pages
@@ -99,7 +99,6 @@ jobs:
           enable_jekyll: false
           exclude_assets: '.github,**.json,**.bz2,**.zst'
       - name: Upload conda repodata for ${{ matrix.subdir }}
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # v2.0.5
         with:
           draft: false
