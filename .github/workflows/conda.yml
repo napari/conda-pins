@@ -1,0 +1,57 @@
+name: Create conda subchannel
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # Concurrency group that uses the workflow name and PR number if available
+  # or commit SHA as a fallback. If a new build is triggered under that
+  # concurrency group while a previous build is running it will be canceled.
+  # Repeated pushes to a PR will cancel all previous builds, while multiple
+  # merges to main will not cancel.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        napari-version:
+          - "v0.4.19"
+          - "v0.5"
+    permissions:
+      contents: write  # to deploy to GH Pages automatically
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Get arguments
+        id: args
+        run: |
+          echo "keep-trees=$(jq -r '."keep-trees" | join(" ")' versions/${{ matrix.napari-version }}/conda.json)"" >> $GITHUB_OUTPUT
+          echo "subdirs=$(jq -r '.subdirs | join(" ")' versions/${{ matrix.napari-version }}/conda.json)"" >> $GITHUB_OUTPUT
+      - uses: conda-incubator/conda-subchannel@main
+        id: subchannel
+        with:
+          channel: conda-forge
+          subdirs: ${{ steps.args.outputs.subdirs }}
+          keep-trees: ${{ steps.args.outputs.keep-trees }}
+          gh-pages-branch: ''  # Disable so we do it manually below
+      - uses: actions/upload-artifact@v4
+        with:
+          name: subchannel-napari-${{ matrix.napari-version }}
+          path: ${{ steps.subchannel.outputs.output-directory }}
+      - uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ github.token }}
+          publish_branch: gh-pages
+          publish_dir: ${{ steps.subchannel.outputs.output-directory }}
+          destination_dir: conda/napari-${{ matrix.napari-version }}
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+          enable_jekyll: false
