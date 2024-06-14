@@ -6,6 +6,8 @@ on:
       - main
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "20 * * * *"  # Every 1h
 
 concurrency:
   # Concurrency group that uses the workflow name and PR number if available
@@ -17,7 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -25,14 +27,18 @@ jobs:
         napari-version:
           - "v0.4.19"
           - "v0.5"
-    permissions:
-      contents: write  # to deploy to GH Pages automatically
+    outputs:
+      output-directory: ${{ steps.args.outputs.output-directory }}
+      subchannel-name: ${{ steps.args.outputs.subchannel-name }}
+      subdirs: ${{ steps.args.outputs.subdirs_json }}
+      lastmodtime: ${{ steps.current-time.outputs.formattedTime }}
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - name: Get arguments
         id: args
         run: |
           echo "keep-trees=$(jq -r '."keep-trees" | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
+          echo "subdirs_json=$(jq '.subdirs' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
           echo "subdirs=$(jq -r '.subdirs | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
           echo "subchannel-name=napari-${{ matrix.napari-version }}" >> $GITHUB_OUTPUT
       - uses: conda-incubator/conda-subchannel@main
@@ -43,17 +49,66 @@ jobs:
           subdirs: ${{ steps.args.outputs.subdirs }}
           keep-trees: ${{ steps.args.outputs.keep-trees }}
           gh-pages-branch: ''  # Disable so we do it manually below
+          served-at: "https://github.com/napari/pins/releases/download/conda/${{ steps.args.outputs.subchannel-name }}"
+      - name: Get current time
+        uses: josStorer/get-current-time@060cae3fbd32c181c6841788189a601ac8df8389 # v2.1.2
+        id: current-time
+        with:
+          format: "YYYY-MM-DD HH:MM:SS"
+          utcOffset: "+00:00"    
       - uses: actions/upload-artifact@v4
         with:
           name: subchannel-${{ steps.args.outputs.subchannel-name }}
           path: ${{ steps.subchannel.outputs.output-directory }}
+
+  publish:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    needs: [build]
+    permissions:
+      contents: write  # to deploy to GH Pages automatically
+    strategy:
+      matrix:
+        subdir: ${{ needs.build.outputs.subdirs }}
+    steps:
+      - name: Retrieve release distributions
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        with:
+          name: subchannel-${{ needs.build.outputs.subchannel-name }}
+          path: dist/
+      - name: Publish release distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@81e9d935c883d0b210363ab89cf05f3894778450 # v1.8.14
       - uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
-        if: github.ref == 'refs/heads/main'
+        if: matrix.subdir == 'noarch'
         with:
           github_token: ${{ github.token }}
           publish_branch: gh-pages
-          publish_dir: ${{ steps.subchannel.outputs.output-directory }}
-          destination_dir: conda/${{ steps.args.outputs.subchannel-name }}
+          publish_dir: ${{ needs.build.outputs.output-directory }}
+          destination_dir: conda/${{ needs.build.outputs.subchannel-name }}
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           enable_jekyll: false
+          exclude_assets: '.github,**.json,**.bz2,**.zst'
+      - name: Upload conda repodata for ${{ matrix.subdir }}
+        uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # v2.0.5
+        with:
+          draft: false
+          name: conda/${{ needs.build.outputs.subchannel-name }}/${{ matrix.subdir }}
+          tag_name: conda/${{ needs.build.outputs.subchannel-name }}/${{ matrix.subdir }}
+          files: |
+            ${{ needs.build.outputs.output-directory }}/${{ matrix.subdir }}/*.json
+          fail_on_unmatched_files: true
+          body: |
+            Repodata for ${{ needs.build.outputs.subchannel-name }}/${{ matrix.subdir }} subchannel.
+            Last updated on ${{ needs.build.outputs.lastmodtime }}. 
+            See the README for more information.
+
+
+  keepalive-job:
+    name: Keep workflow alive
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+      - uses: gautamkrishnar/keepalive-workflow@05456e7809058d586d96392e99217726ccc10076 # v2.0.5
