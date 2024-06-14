@@ -30,7 +30,7 @@ jobs:
     outputs:
       output-directory: ${{ steps.args.outputs.output-directory }}
       subchannel-name: ${{ steps.args.outputs.subchannel-name }}
-      subdirs: ${{ steps.args.outputs.subdirs_json }}
+      subdirs: ${{ steps.args.outputs.subdirs-json }}
       lastmodtime: ${{ steps.current-time.outputs.formattedTime }}
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -38,7 +38,7 @@ jobs:
         id: args
         run: |
           echo "keep-trees=$(jq -r '."keep-trees" | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
-          echo "subdirs_json=$(jq '.subdirs' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
+          echo "subdirs-json=$(jq -c '.subdirs' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
           echo "subdirs=$(jq -r '.subdirs | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
           echo "subchannel-name=napari-${{ matrix.napari-version }}" >> $GITHUB_OUTPUT
       - uses: conda-incubator/conda-subchannel@main
