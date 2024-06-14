@@ -19,18 +19,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.args.outputs.versions }}
+    steps:
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - name: Get arguments
+        id: args
+        run: echo "versions=$(ls versions | jq -Rsc 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+
   build:
+    needs: [prepare]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        napari-version:
-          - "v0.4.19"
-          - "v0.5"
+        napari-version: ${{ fromJson(needs.prepare.outputs.versions) }}
     outputs:
       output-directory: ${{ steps.args.outputs.output-directory }}
-      subchannel-name: ${{ steps.args.outputs.subchannel-name }}
+      subchannel-names: ${{ steps.args.outputs.subchannel-names }}
       subdirs: ${{ steps.args.outputs.subdirs-json }}
+      versions: ${{ needs.prepare.outputs.versions }}
       lastmodtime: ${{ steps.current-time.outputs.formattedTime }}
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
@@ -49,7 +59,7 @@ jobs:
           subdirs: ${{ steps.args.outputs.subdirs }}
           keep-trees: ${{ steps.args.outputs.keep-trees }}
           gh-pages-branch: ''  # Disable so we do it manually below
-          served-at: "https://github.com/napari/pins/releases/download/conda/${{ steps.args.outputs.subchannel-name }}"
+          served-at: "https://github.com/napari/pins/releases/download/${{ steps.args.outputs.subchannel-name }}"
       - name: Get current time
         uses: josStorer/get-current-time@060cae3fbd32c181c6841788189a601ac8df8389 # v2.1.2
         id: current-time
@@ -70,18 +80,19 @@ jobs:
     strategy:
       matrix:
         subdir: ${{ fromJson(needs.build.outputs.subdirs) }}
+        version: ${{ fromJson(needs.build.outputs.versions) }}
     steps:
       - name: Retrieve release distributions
         uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
-          name: subchannel-${{ needs.build.outputs.subchannel-name }}
+          name: subchannel-napari-${{ matrix.version }}
       - uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         if: matrix.subdir == 'noarch' && github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         with:
           github_token: ${{ github.token }}
           publish_branch: gh-pages
           publish_dir: ${{ needs.build.outputs.output-directory }}
-          destination_dir: conda/${{ needs.build.outputs.subchannel-name }}
+          destination_dir: conda/napari-${{ matrix.version }}
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           enable_jekyll: false
@@ -91,13 +102,13 @@ jobs:
         uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # v2.0.5
         with:
           draft: false
-          name: conda/${{ needs.build.outputs.subchannel-name }}/${{ matrix.subdir }}
-          tag_name: conda/${{ needs.build.outputs.subchannel-name }}/${{ matrix.subdir }}
+          name: napari-${{ matrix.version }}/${{ matrix.subdir }}
+          tag_name: napari-${{ matrix.version }}/${{ matrix.subdir }}
           files: |
             ${{ needs.build.outputs.output-directory }}/${{ matrix.subdir }}/*.json
           fail_on_unmatched_files: true
           body: |
-            Repodata for ${{ needs.build.outputs.subchannel-name }}/${{ matrix.subdir }} subchannel.
+            Repodata for napari-${{ matrix.version }}/${{ matrix.subdir }} subchannel.
             Last updated on ${{ needs.build.outputs.lastmodtime }}. 
             See the README for more information.
 
