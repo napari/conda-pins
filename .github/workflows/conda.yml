@@ -92,7 +92,7 @@ jobs:
         with:
           github_token: ${{ github.token }}
           publish_branch: gh-pages
-          publish_dir: ${{ needs.build.outputs.output-directory }}
+          publish_dir: ./
           destination_dir: conda/${{ needs.build.outputs.subchannel-prefix }}${{ matrix.version }}
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
