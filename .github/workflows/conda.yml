@@ -67,7 +67,7 @@ jobs:
           utcOffset: "+00:00"
       - uses: actions/upload-artifact@v4
         with:
-          name: subchannel-${{ steps.args.outputs.subchannel-name }}
+          name: ${{ steps.args.outputs.subchannel-name }}
           path: ${{ steps.subchannel.outputs.output-directory }}
 
   publish-website:
@@ -76,22 +76,18 @@ jobs:
     needs: [build]
     permissions:
       contents: write # to deploy to GH Pages
-    strategy:
-      matrix:
-        version: ${{ fromJson(needs.build.outputs.versions) }}
     steps:
       - name: Retrieve release distributions
         uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
-          name: subchannel-${{ needs.build.outputs.subchannel-prefix }}${{ matrix.version }}
-          path: pub/
+          pattern: "${{ needs.build.outputs.subchannel-prefix }}*"
       - name: List website files
-        run: ls -alh pub/
+        run: ls -alh
       - uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ github.token }}
           publish_branch: gh-pages
-          publish_dir: pub/
+          publish_dir: ./
           destination_dir: conda/${{ needs.build.outputs.subchannel-prefix }}${{ matrix.version }}
           user_name: "github-actions[bot]"
           user_email: "github-actions[bot]@users.noreply.github.com"
@@ -114,7 +110,7 @@ jobs:
       - name: Retrieve release distributions
         uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
-          name: subchannel-${{ needs.build.outputs.subchannel-prefix }}${{ matrix.version }}
+          name: "${{ needs.build.outputs.subchannel-prefix }}${{ matrix.version }}"
       - name: List repodata files
         run: ls -alh ${{ matrix.subdir }}/repodata.*
       - name: Upload conda repodata for ${{ matrix.subdir }}
