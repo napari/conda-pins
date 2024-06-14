@@ -116,6 +116,7 @@ jobs:
   keepalive-job:
     name: Keep workflow alive
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     permissions:
       actions: write
     steps:
