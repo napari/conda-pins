@@ -63,7 +63,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     needs: [build]
     permissions:
       contents: write  # to deploy to GH Pages automatically
@@ -75,11 +75,8 @@ jobs:
         uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
         with:
           name: subchannel-${{ needs.build.outputs.subchannel-name }}
-          path: dist/
-      - name: Publish release distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@81e9d935c883d0b210363ab89cf05f3894778450 # v1.8.14
       - uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
-        if: matrix.subdir == 'noarch'
+        if: matrix.subdir == 'noarch' && github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         with:
           github_token: ${{ github.token }}
           publish_branch: gh-pages
@@ -90,6 +87,7 @@ jobs:
           enable_jekyll: false
           exclude_assets: '.github,**.json,**.bz2,**.zst'
       - name: Upload conda repodata for ${{ matrix.subdir }}
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@69320dbe05506a9a39fc8ae11030b214ec2d1f87 # v2.0.5
         with:
           draft: false
