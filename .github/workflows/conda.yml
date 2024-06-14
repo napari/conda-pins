@@ -34,16 +34,18 @@ jobs:
         run: |
           echo "keep-trees=$(jq -r '."keep-trees" | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
           echo "subdirs=$(jq -r '.subdirs | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
+          echo "subchannel-name=napari-${{ matrix.napari-version }}" >> $GITHUB_OUTPUT
       - uses: conda-incubator/conda-subchannel@main
         id: subchannel
         with:
+          subchannel-name: ${{ steps.args.outputs.subchannel-name }}
           channel: conda-forge
           subdirs: ${{ steps.args.outputs.subdirs }}
           keep-trees: ${{ steps.args.outputs.keep-trees }}
           gh-pages-branch: ''  # Disable so we do it manually below
       - uses: actions/upload-artifact@v4
         with:
-          name: subchannel-napari-${{ matrix.napari-version }}
+          name: subchannel-${{ steps.args.outputs.subchannel-name }}
           path: ${{ steps.subchannel.outputs.output-directory }}
       - uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         if: github.ref == 'refs/heads/main'
@@ -51,7 +53,7 @@ jobs:
           github_token: ${{ github.token }}
           publish_branch: gh-pages
           publish_dir: ${{ steps.subchannel.outputs.output-directory }}
-          destination_dir: conda/napari-${{ matrix.napari-version }}
+          destination_dir: conda/${{ steps.args.outputs.subchannel-name }}
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           enable_jekyll: false
