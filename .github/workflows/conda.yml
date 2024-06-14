@@ -32,8 +32,8 @@ jobs:
       - name: Get arguments
         id: args
         run: |
-          echo "keep-trees=$(jq -r '."keep-trees" | join(" ")' versions/${{ matrix.napari-version }}/conda.json)"" >> $GITHUB_OUTPUT
-          echo "subdirs=$(jq -r '.subdirs | join(" ")' versions/${{ matrix.napari-version }}/conda.json)"" >> $GITHUB_OUTPUT
+          echo "keep-trees=$(jq -r '."keep-trees" | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
+          echo "subdirs=$(jq -r '.subdirs | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
       - uses: conda-incubator/conda-subchannel@main
         id: subchannel
         with:
