@@ -71,18 +71,13 @@ jobs:
           path: ${{ steps.subchannel.outputs.output-directory }}
   
   build-pypi-constraints:
-    needs: [prepare]
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        napari-version: ${{ fromJson(needs.prepare.outputs.versions) }}
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - uses: actions/upload-artifact@v4
         with:
           name: pypi-napari-${{ matrix.napari-version }}
-          path: versions/${{ matrix.napari-version }}/*.txt
+          path: versions/*/*.txt
 
   publish-website:
     runs-on: ubuntu-latest
