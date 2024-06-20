@@ -76,7 +76,7 @@ jobs:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
       - uses: actions/upload-artifact@v4
         with:
-          name: pypi-napari-${{ matrix.napari-version }}
+          name: pypi-napari-allversions
           path: versions/*/*.txt
 
   publish-website:
@@ -98,8 +98,8 @@ jobs:
           for d in conda-*/; do
             mv $d conda/${d:6}
           done
-          for d in pypi-*/; do
-            mv $d pypi/${d:5}
+          for d in pypi-napari-allversions/*; do
+            mv $d pypi/napari-$(basename $d)
           done
       - name: List website files
         run: tree -sh
