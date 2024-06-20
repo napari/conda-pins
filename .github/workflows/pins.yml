@@ -81,7 +81,7 @@ jobs:
 
   publish-website:
     runs-on: ubuntu-latest
-    # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     needs: [build-conda-subchannel, build-pypi-constraints]
     permissions:
       contents: write # to deploy to GH Pages
@@ -105,7 +105,6 @@ jobs:
       - name: List website files
         run: tree -sh
       - uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
-        if: false
         with:
           github_token: ${{ github.token }}
           publish_branch: gh-pages
@@ -119,8 +118,7 @@ jobs:
 
   publish-repodata:
     runs-on: ubuntu-latest
-    if: false
-    # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     needs: [build-conda-subchannel]
     permissions:
       contents: write # to deploy to GH Releases
