@@ -46,7 +46,7 @@ jobs:
       - name: Get arguments
         id: args
         run: |
-          echo "keep-trees=$(jq -r '."keep-trees" | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
+          echo "prune=$(jq -r '."prune" | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
           echo "subdirs-json=$(jq -c '.subdirs' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
           echo "subdirs=$(jq -r '.subdirs | join(" ")' versions/${{ matrix.napari-version }}/conda.json)" >> $GITHUB_OUTPUT
           echo "subchannel-name=napari-${{ matrix.napari-version }}" >> $GITHUB_OUTPUT
@@ -56,7 +56,7 @@ jobs:
           subchannel-name: ${{ steps.args.outputs.subchannel-name }}
           channel: conda-forge
           subdirs: ${{ steps.args.outputs.subdirs }}
-          keep-trees: ${{ steps.args.outputs.keep-trees }}
+          prune-specs: ${{ steps.args.outputs.prune }}
           gh-pages-branch: "" # Disable so we do it manually below
           served-at: "https://github.com/napari/pins/releases/download/${{ steps.args.outputs.subchannel-name }}"
       - name: Get current time
